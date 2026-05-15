@@ -60,17 +60,30 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(notFound);
 app.use(errorHandler);
 
+// Export app for Vercel Serverless Functions
+export default app;
+
 const startServer = async () => {
   try {
     await connectDB();
-    await seedDatabase();
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+    // Only seed if NOT in production to prevent auto-seeding on serverless cold starts
+    if (process.env.NODE_ENV !== 'production') {
+      await seedDatabase();
+    }
+    
+    if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    }
   } catch (error) {
     console.error('Failed to start server:', error.message);
-    process.exit(1);
+    // On Vercel, we don't want to exit the process as it might be a cold start
+    if (process.env.VERCEL !== '1') {
+      process.exit(1);
+    }
   }
 };
 
+// Initialize connections
 startServer();
